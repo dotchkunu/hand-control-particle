@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mystic India · Neural Shakti</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; user-select: none; }
+        canvas { display: block; }
+
+        /* --- UI LAYER --- */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+
+        /* CURSOR (strange spark) */
+        #cursor {
+            position: absolute; width: 24px; height: 24px;
+            border: 2px solid #ff9933; border-radius: 50%;
+            transform: translate(-50%, -50%); 
+            box-shadow: 0 0 20px #ff9933, 0 0 40px #138808;
+            transition: width 0.1s, background 0.1s;
+            z-index: 100;
+            background: radial-gradient(circle, #ffffff80 0%, #ff9933 80%);
+            mix-blend-mode: screen;
+        }
+        #cursor.active { background: #ffd700; width: 45px; height: 45px; opacity: 0.9; box-shadow: 0 0 40px #ffffff; }
+
+        /* HUD PANELS – saffron, white, green */
+        .hud {
+            position: absolute; background: rgba(10, 20, 5, 0.8);
+            border-left: 4px solid #ff9933; 
+            border-right: 1px solid #138808;
+            padding: 15px;
+            color: #fff3e0; backdrop-filter: blur(12px);
+            box-shadow: 0 0 30px #ff993366;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 5px #ffaa00;
+        }
+        #stats-panel { top: 20px; left: 20px; width: 240px; border-radius: 0 20px 20px 0; }
+        #help-panel { bottom: 20px; left: 20px; pointer-events: auto; cursor: pointer; border: 1px solid #138808; background: #0a1f0a; }
+        
+        h3 { margin: 0 0 10px 0; font-size: 16px; letter-spacing: 2px; border-bottom: 2px solid #ff9933; padding-bottom: 5px; color: #ffd966; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
+        .val { color: #ffd966; font-weight: bold; }
+
+        /* VIRTUAL BUTTONS — tantric circles */
+        .v-btn {
+            position: absolute; width: 100px; height: 100px; right: 30px;
+            border-radius: 50%; border: 2px solid #ff9933;
+            display: flex; align-items: center; justify-content: center;
+            text-align: center; font-size: 11px; font-weight: bold; letter-spacing: 1px;
+            color: #fff; transition: all 0.3s ease;
+            background: rgba(0,40,0,0.5);
+            box-shadow: 0 0 20px #138808;
+            backdrop-filter: blur(4px);
+        }
+        .v-btn.hover { transform: scale(1.15); border-color: #ffffff; box-shadow: 0 0 40px #ff9933, 0 0 60px #138808; }
+        /* Progress Ring (chakra inspired) */
+        .ring {
+            position: absolute; top: -5px; left: -5px; right: -5px; bottom: -5px;
+            border-radius: 50%; border: 3px solid transparent;
+            border-top-color: #ff9933; border-bottom-color: #138808;
+            transition: transform 0.1s;
+            opacity: 0;
+        }
+
+        /* HELP MODAL */
+        #help-modal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 650px; background: rgba(10,20,5,0.97); border: 3px solid #ff9933;
+            color: #fff; padding: 40px; display: none; z-index: 200; pointer-events: auto;
+            text-align: center; box-shadow: 0 0 80px #138808;
+            border-radius: 30px 0 30px 0;
+        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; text-align: left; }
+        .key { color: #ff9933; font-weight: bold; }
+
+        /* LOADER with tricolor */
+        #loader {
+            position: absolute; top:0; left:0; width:100%; height:100%; 
+            background: linear-gradient(135deg, #ff9933 0%, #ffffff 50%, #138808 100%);
+            display:flex; justify-content:center; align-items:center; flex-direction:column;
+            z-index: 999; color: #000; text-shadow: 2px 2px 0 #ffffff80;
+        }
+        button.start {
+            padding: 15px 40px; font-size: 20px; background: #000000cc;
+            color: #ff9933; border: 3px solid #ff9933; cursor: pointer;
+            margin-top: 20px; text-transform: uppercase; letter-spacing: 4px;
+            transition: 0.3s; border-radius: 40px; font-weight: bold;
+        }
+        button.start:hover { background: #ff9933; color: #000; box-shadow: 0 0 30px #ffffff; }
+
+        /* HIDDEN CAM */
+        #cam-input {
+            position: absolute; bottom: 20px; right: 150px; width: 160px; height: 120px;
+            border: 3px solid #ff9933; opacity: 0.7; z-index: 5; transform: scaleX(-1);
+            border-radius: 20px; box-shadow: 0 0 30px #138808;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <h1 style="font-size: 48px; margin:0;">🇮🇳  माया शक्ति  🇮🇳</h1>
+        <div id="status-msg" style="font-size:18px; background:#00000080; padding:8px 20px; color:#fff;">ASHOK CHAKRA · TANTRIC FLOW</div>
+        <button class="start" onclick="initSystem()">⚡ AWAKEN ⚡</button>
+        <p style="font-size: 12px; color: #222; margin-top: 15px; background:#ffffffaa; padding:5px;">gesture magic • doctor strange style • kunal boss</p>
+    </div>
+
+    <div id="ui-layer">
+        <div id="cursor"></div>
+
+        <div class="v-btn" id="btn-shape" style="top: 20%;">
+            <div class="ring"></div>
+            मंडALA<br>SHAPE
+        </div>
+        <div class="v-btn" id="btn-color" style="top: 40%;">
+            <div class="ring"></div>
+            रंग<br>RANG
+        </div>
+
+        <div class="hud" id="stats-panel">
+            <h3>🌀  तेलेमेट्री  🌀</h3>
+            <div class="row"><span>मुद्रा (GESTURE):</span> <span id="ui-gesture" class="val">ध्यान</span></div>
+            <div class="row"><span>यंत्र (SHAPE):</span> <span id="ui-shape" class="val">अशोक चक्र</span></div>
+            <div class="row"><span>कण (PARTICLES):</span> <span class="val">10,000</span></div>
+            <div class="row"><span>दृश्य (ZOOM):</span> <span id="ui-zoom" class="val">100%</span></div>
+        </div>
+
+        <div class="hud" id="help-panel" onclick="toggleHelp()">
+            [ ? ] स्मरण · साधना
+        </div>
+    </div>
+
+    <div id="help-modal">
+        <h2 style="color: #ff9933; margin-top: 0; font-size:28px;">🌀 डॉक्टर स्ट्रेंज मुद्राएँ</h2>
+        <div class="grid">
+            <div><span class="key">☝️ तर्जनी</span> : कर्सर / बटन दबाएँ</div>
+            <div><span class="key">🖐 खुली हथेली</span> : घुमाएँ (ब्रह्मांड)</div>
+            <div><span class="key">✊ मुट्ठी</span> : प्रलय (सिंगुलेरिटी)</div>
+            <div><span class="key">✌️ विजय (V)</span> : अगला आकार (कुनाल बॉस)</div>
+            <div><span class="key">👌 ठीक है</span> : रंग चक्र (भारत)</div>
+            <div><span class="key">🤟 रॉक ऑन</span> : अराजकता / डॉक्टर स्ट्रेंज पोर्टल</div>
+            <div><span class="key">👍 अंगूठा ऊपर</span> : ज़ूम इन (सूक्ष्म)</div>
+            <div><span class="key">👎 अंगूठा नीचे</span> : ज़ूम आउट (स्थूल)</div>
+        </div>
+        <p style="color:#138808; font-size:14px;">✨ कुनाल बॉस स्पाइरल + तिरंगा + अशोक चक्र ✨</p>
+        <button class="start" onclick="toggleHelp()" style="font-size: 14px; padding: 10px 30px;">समाप्त · बंद करें</button>
+    </div>
+
+    <video id="cam-input" playsinline muted></video>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+    <script>
+        // -------------------------------------------------------------
+        //  ULTIMATE NEURAL SHAKTI – with INDIAN FLAG, KUNAL BOSS, DOCTOR STRANGE MAGIC
+        // -------------------------------------------------------------
+        class Stabilizer {
+            constructor(alpha = 0.1) { this.val = 0; this.alpha = alpha; }
+            update(target) { this.val += (target - this.val) * this.alpha; return this.val; }
+        }
+        const stabX = new Stabilizer(0.08); 
+        const stabY = new Stabilizer(0.08);
+
+        // --- STATE with extra magic flags
+        const config = { count: 12000, size: 0.18, lerp: 0.05 };
+        const state = {
+            shapeIdx: 0,
+            colorIdx: 0,
+            rot: { x: 0, y: 0 },
+            zoom: 1.0,
+            hoverVal: 0,
+            mode: 'normal', // normal, implode, chaos (strange portal)
+            lastGestureTime: 0,
+            strangeGlow: 0.0   // for magic ripple
+        };
+
+        // --- THREE.JS SCENE ---
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0a1f0a, 0.015); // deep green fog
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        camera.position.z = 24;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        // --- SHAPE GENERATORS with Indian & Kunal Boss & Strange Magic
+        const generators = {
+            // 1. ASHOK CHAKRA (24 spokes – simplified as spoked wheel)
+            'अशोक चक्र': (i) => {
+                const R = 11;
+                let spoke = Math.floor(i / 500) % 24; // 24 spokes
+                let angle = (spoke / 24) * Math.PI * 2 + (i * 0.001);
+                let r = 5 + 6 * Math.sin(i * 0.5); // ripple
+                let x = Math.cos(angle) * r;
+                let z = Math.sin(angle) * r;
+                let y = Math.sin(angle * 4) * 2; // slight wave
+                return [x, y, z];
+            },
+            // 2. तिरंगा WAVE (Indian flag tricolor wave)
+            'तिरंगा लहर': (i) => {
+                let t = (i / config.count) * 4 * Math.PI;
+                let x = Math.sin(t * 2) * 12;
+                let y = Math.cos(t * 3) * 5 + (Math.floor(i/4000) % 3 - 1) * 3; // three layers
+                let z = Math.sin(t * 1.5) * 12;
+                return [x, y, z];
+            },
+            // 3. KUNAL BOSS – signature spiral with attitude (inspired by his energy)
+            'कुनाल बॉस': (i) => {
+                let t = (i / config.count) * 6 * Math.PI;
+                let r = 8 + 3 * Math.sin(t * 2.5);
+                let x = Math.cos(t * 3) * r;
+                let z = Math.sin(t * 3) * r;
+                let y = Math.sin(t * 5) * 6 + Math.cos(t * 2) * 3;
+                return [x * 1.2, y, z * 1.2];
+            },
+            // 4. डॉक्टर स्ट्रेंज MANDALA (interlocking rings / mystical floating sigils)
+            'स्ट्रेंज मंडल': (i) => {
+                let phi = (i * 13) % 1 * Math.PI * 2;
+                let theta = Math.acos(2 * (i % 1) - 1);
+                let rad = 11 + 3 * Math.sin(i * 15); // shimmer
+                let x = rad * Math.sin(theta) * Math.cos(phi);
+                let y = rad * Math.sin(theta) * Math.sin(phi) * 0.6; // flatten
+                let z = rad * Math.cos(theta);
+                // add strange runes offset
+                if (i % 7 < 2) { x += 2 * Math.sin(phi*5); y += 2 * Math.cos(theta*3); }
+                return [x, y, z];
+            },
+            // 5. भारत गेट (arch / gate of magic)
+            'भारत द्वार': (i) => {
+                let t = (i / config.count) * 2 * Math.PI;
+                let archX = 14 * Math.sin(t);
+                let archY = 8 * Math.cos(t) + 4; // top arch
+                let archZ = 5 * Math.sin(t * 2);
+                return [archX, archY, archZ];
+            },
+            // 6. लक्ष्मी (lotus bloom – extra shape)
+            'कमल पुष्प': (i) => {
+                let angle = (i * 17) % (2*Math.PI);
+                let r = 6 + 5 * Math.sin(i * 0.3);
+                let x = Math.cos(angle) * r;
+                let z = Math.sin(angle) * r;
+                let y = Math.cos(angle * 8) * 4 + Math.sin(i * 0.5) * 3;
+                return [x, y, z];
+            }
+        };
+
+        const shapeKeys = Object.keys(generators);
+        // Indian tricolor palette + magic saffron/white/green + strange glints
+        const palettes = [
+            [1.0, 0.6, 0.2], // saffron
+            [1.0, 1.0, 1.0], // white
+            [0.2, 0.8, 0.1], // india green
+            [1.0, 0.8, 0.2], // golden (chakra)
+            [0.2, 0.4, 1.0], // strange electric blue
+            [0.8, 0.2, 0.8]  // mystic violet
+        ];
+
+        // --- PARTICLE SYSTEM ---
+        const pos = new Float32Array(config.count * 3);
+        const tar = new Float32Array(config.count * 3);
+        const col = new Float32Array(config.count * 3);
+
+        for(let i=0; i<config.count*3; i++) pos[i] = tar[i] = (Math.random()-0.5)*40;
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+        const material = new THREE.PointsMaterial({
+            size: config.size, vertexColors: true, blending: THREE.AdditiveBlending,
+            transparent: true, opacity: 0.95, depthWrite: false,
+            map: createSprite() // tiny glow texture
+        });
+
+        const particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+
+        // make a small round glow texture
+        function createSprite() {
+            const canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.arc(8,8,6,0,2*Math.PI); ctx.fill();
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = '#ffaa33'; ctx.arc(8,8,4,0,2*Math.PI); ctx.fill();
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function updateShape() {
+            const key = shapeKeys[state.shapeIdx];
+            document.getElementById('ui-shape').innerText = key;
+            const gen = generators[key];
+            for(let i=0; i<config.count; i++) {
+                const p = gen(i);
+                tar[i*3] = p[0]; tar[i*3+1] = p[1]; tar[i*3+2] = p[2];
+            }
+        }
+        updateShape();
+
+        // --- GESTURE LOGIC (enriched with strange magic) ---
+        function checkFinger(lm, idx) {
+            const tips = [4,8,12,16,20];
+            const pips = [2,6,10,14,18];
+            return lm[tips[idx]].y < lm[pips[idx]].y; 
+        }
+
+        const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+        function processHands(results) {
+            if(!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
+                document.getElementById('ui-gesture').innerText = "हाथ नहीं";
+                return;
+            }
+
+            const lm = results.multiHandLandmarks[0];
+            const now = Date.now();
+
+            // CURSOR (mirrored)
+            const cursorX = (1 - lm[8].x) * window.innerWidth; 
+            const cursorY = lm[8].y * window.innerHeight;
+            const cursorEl = document.getElementById('cursor');
+            cursorEl.style.left = cursorX + 'px';
+            cursorEl.style.top = cursorY + 'px';
+
+            const f = [
+                checkFinger(lm, 0), checkFinger(lm, 1), checkFinger(lm, 2),
+                checkFinger(lm, 3), checkFinger(lm, 4)
+            ];
+
+            let g = "अज्ञात";
+            state.mode = 'normal';
+            state.strangeGlow = 0;
+
+            const isFist = !f[1] && !f[2] && !f[3] && !f[4];
+            const isPalm = f[1] && f[2] && f[3] && f[4];
+            const isPoint = f[1] && !f[2] && !f[3] && !f[4];
+            const isPeace = f[1] && f[2] && !f[3] && !f[4];
+            const isOK = dist(lm[4], lm[8]) < 0.04;
+            const isRock = f[1] && !f[2] && !f[3] && f[4];
+            const isThumbUp = f[0] && !f[1] && !f[2] && !f[3] && !f[4]; // thumb only up
+            const isThumbDown = !f[0] && f[1] && f[2] && f[3] && f[4]; // simplified
+
+            if (isFist) {
+                g = "मुट्ठी (प्रलय)";
+                state.mode = 'implode';
+                state.strangeGlow = 1.5;
+            } else if (isOK) {
+                g = "ठीक (रंग)";
+                if(now - state.lastGestureTime > 700) {
+                    state.colorIdx = (state.colorIdx + 1) % palettes.length;
+                    state.lastGestureTime = now;
+                }
+            } else if (isRock) {
+                g = "रॉक (पोर्टल)";
+                state.mode = 'chaos';
+                state.strangeGlow = 2.0; // dr strange spark
+            } else if (isPeace) {
+                g = "विजय (अगला आकार)";
+                if(now - state.lastGestureTime > 1000) {
+                    state.shapeIdx = (state.shapeIdx + 1) % shapeKeys.length;
+                    updateShape();
+                    state.lastGestureTime = now;
+                }
+            } else if (isPalm) {
+                g = "हथेली (घूर्णन)";
+                const hx = (lm[9].x - 0.5) * 4;
+                const hy = (lm[9].y - 0.5) * 4;
+                state.rot.y = stabX.update(hx);
+                state.rot.x = stabY.update(hy);
+            } else if (isPoint) {
+                g = "तर्जनी (बटन)";
+                checkButtons(cursorX, cursorY);
+            } else if (isThumbUp) {
+                g = "अंगूठा ऊपर (ज़ूम+)";
+                state.zoom = Math.min(state.zoom + 0.015, 3.0);
+            } else if (isThumbDown) {
+                g = "अंगूठा नीचे (ज़ूम-)";
+                state.zoom = Math.max(state.zoom - 0.015, 0.4);
+            }
+
+            document.getElementById('ui-gesture').innerText = g;
+            document.getElementById('ui-zoom').innerText = Math.round(state.zoom * 100) + "%";
+            
+            particles.rotation.x = state.rot.x;
+            particles.rotation.y = state.rot.y;
+        }
+
+        // --- BUTTONS with Indian style ---
+        function checkButtons(x, y) {
+            const btns = ['btn-shape', 'btn-color'];
+            let hitAny = false;
+
+            btns.forEach(id => {
+                const el = document.getElementById(id);
+                const rect = el.getBoundingClientRect();
+                const ring = el.querySelector('.ring');
+
+                if(x > rect.left && x < rect.right && y > rect.top && y < rect.bottom) {
+                    hitAny = true;
+                    el.classList.add('hover');
+                    state.hoverVal += 4; 
+                    
+                    ring.style.opacity = 1;
+                    ring.style.transform = `rotate(${state.hoverVal * 3.6}deg)`;
+
+                    if(state.hoverVal > 100) {
+                        if(id === 'btn-shape') {
+                            state.shapeIdx = (state.shapeIdx + 1) % shapeKeys.length;
+                            updateShape();
+                        } else {
+                            state.colorIdx = (state.colorIdx + 1) % palettes.length;
+                        }
+                        state.hoverVal = 0;
+                        el.classList.remove('hover');
+                    }
+                } else {
+                    el.classList.remove('hover');
+                    ring.style.opacity = 0;
+                }
+            });
+
+            if(!hitAny) state.hoverVal = 0;
+            const cur = document.getElementById('cursor');
+            hitAny ? cur.classList.add('active') : cur.classList.remove('active');
+        }
+
+        // --- INIT CAMERA ---
+        async function initSystem() {
+            const status = document.getElementById('status-msg');
+            const btn = document.querySelector('button.start');
+            const video = document.getElementById('cam-input');
+
+            btn.style.display = 'none';
+            status.innerText = "🔱 जागरण ... 🔱";
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                video.srcObject = stream;
+                await video.play();
+
+                status.innerText = "मॉडल लोड हो रहे हैं...";
+
+                const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+                
+                hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+                
+                hands.onResults(processHands);
+
+                const cam = new Camera(video, {
+                    onFrame: async () => await hands.send({image: video}),
+                    width: 640, height: 480
+                });
+                
+                await cam.start();
+                
+                document.getElementById('loader').style.display = 'none';
+
+            } catch (e) {
+                status.innerText = "ERROR: " + e.message;
+                status.style.color = "red";
+                btn.style.display = "block";
+                btn.innerText = "पुन: प्रयास";
+            }
+        }
+
+        // --- ANIMATION with DOCTOR STRANGE ripple effect ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const rgb = palettes[state.colorIdx];
+            const now = Date.now() * 0.002;
+            
+            for(let i=0; i<config.count; i++) {
+                const ix = i*3;
+                let tx = tar[ix], ty = tar[ix+1], tz = tar[ix+2];
+
+                // Magic modifiers
+                if(state.mode === 'implode') {
+                    // implode with strange twist
+                    let f = Math.sin(i * 0.1 + now) * 0.5 + 0.5;
+                    tx = tx * (1-f); ty = ty * (1-f); tz = tz * (1-f);
+                } else if (state.mode === 'chaos') {
+                    // Doctor Strange portal chaos: spiraling tendrils
+                    let angle = now + i * 0.01;
+                    let rad = 5 + 7 * Math.sin(i * 0.05 + now);
+                    tx += Math.cos(angle) * rad * 0.3;
+                    ty += Math.sin(angle*2) * rad * 0.2;
+                    tz += Math.sin(angle) * rad * 0.3;
+                }
+
+                // LERP movement
+                pos[ix]   += (tx - pos[ix])   * config.lerp;
+                pos[ix+1] += (ty - pos[ix+1]) * config.lerp;
+                pos[ix+2] += (tz - pos[ix+2]) * config.lerp;
+
+                // Color with extra spark based on mode
+                let r = rgb[0], g = rgb[1], b = rgb[2];
+                if(state.mode === 'chaos') {
+                    r += 0.4 * Math.sin(i + now*5);
+                    g += 0.2 * Math.cos(i*2 + now);
+                    b += 0.6 * Math.sin(i*3 + now*2);
+                }
+                col[ix]   += (r - col[ix])   * 0.05;
+                col[ix+1] += (g - col[ix+1]) * 0.05;
+                col[ix+2] += (b - col[ix+2]) * 0.05;
+            }
+
+            // Size magic
+            material.size = config.size * state.zoom * (1 + 0.2 * Math.sin(now * 3));
+            
+            geometry.attributes.position.needsUpdate = true;
+            geometry.attributes.color.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+
+        function toggleHelp() {
+            const h = document.getElementById('help-modal');
+            h.style.display = h.style.display === 'block' ? 'none' : 'block';
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+
+    </script>
+</body>
+</html>
